@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f5f5f7">
+<title>MyFinance</title>
+<style>
+:root{
+  --bg:#f5f5f7;--card:#fff;--text:#171717;--muted:#6e6e73;
+  --border:#e5e5ea;--accent:#007aff;--green:#34c759;--red:#ff3b30;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}
+button,input,select{font:inherit}
+.app{max-width:760px;margin:auto;padding:env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom))}
+header{padding:18px 4px 12px}
+h1{font-size:30px;margin:0 0 4px}.subtitle{color:var(--muted);font-size:14px}
+.card{background:var(--card);border-radius:18px;padding:18px;margin:12px 0;box-shadow:0 1px 4px #0000000d}
+.total{font-size:34px;font-weight:700;margin:5px 0}.label{color:var(--muted);font-size:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{padding:14px;background:#f8f8fa;border-radius:14px}.stat b{display:block;font-size:20px;margin-top:3px}
+.section-title{font-size:20px;font-weight:700;margin:22px 4px 8px}
+.asset{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border)}
+.asset:last-child{border-bottom:0}.asset-name{font-weight:600}.asset-type{font-size:12px;color:var(--muted);margin-top:2px}
+.amount{font-weight:600;margin-right:8px}.actions{display:flex;align-items:center}
+.icon-btn{border:0;background:transparent;padding:7px;color:var(--accent);font-size:14px}
+.icon-btn.delete{color:var(--red)}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}
+input,select{width:100%;padding:13px 12px;border:1px solid var(--border);border-radius:12px;background:#fff;outline:none}
+input:focus,select:focus{border-color:var(--accent)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.primary{width:100%;border:0;border-radius:13px;background:var(--accent);color:white;font-weight:600;padding:14px;margin-top:16px}
+.secondary{width:100%;border:1px solid var(--border);border-radius:13px;background:#fff;padding:13px;margin-top:9px}
+.hidden{display:none!important}
+.empty{text-align:center;color:var(--muted);padding:20px 5px}
+.notice{font-size:13px;color:var(--muted);line-height:1.4}
+.danger{color:var(--red)}
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);
+background:#222;color:#fff;padding:11px 16px;border-radius:12px;font-size:14px;display:none;z-index:20}
+@media(max-width:430px){.row{grid-template-columns:1fr}.total{font-size:30px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>MyFinance</h1>
+  <div class="subtitle">Dein persönlicher Vermögensüberblick</div>
+</header>
+
+<div class="card">
+  <div class="label">Nettovermögen</div>
+  <div class="total" id="netWorth">0,00 €</div>
+  <div class="grid">
+    <div class="stat"><div class="label">Vermögenswerte</div><b id="assetsTotal">0,00 €</b></div>
+    <div class="stat"><div class="label">Verbindlichkeiten</div><b id="liabilitiesTotal">0,00 €</b></div>
+  </div>
+</div>
+
+<div class="section-title">Vermögenswerte</div>
+<div class="card" id="assetList"></div>
+
+<div class="section-title">Verbindlichkeiten</div>
+<div class="card" id="liabilityList"></div>
+
+<div class="section-title" id="formTitle">Neuen Vermögenswert hinzufügen</div>
+<div class="card">
+  <form id="assetForm" novalidate>
+    <input type="hidden" id="editId">
+    <label for="name">Bezeichnung</label>
+    <input id="name" type="text" placeholder="z. B. Girokonto" autocomplete="off">
+
+    <div class="row">
+      <div>
+        <label for="type">Kategorie</label>
+        <select id="type">
+          <option>Bankkonto</option>
+          <option>Depot</option>
+          <option>Immobilie</option>
+          <option>Fahrzeug</option>
+          <option>Versicherung</option>
+          <option>Bargeld</option>
+          <option>Kryptowährung</option>
+          <option>Sonstiges</option>
+        </select>
+      </div>
+      <div>
+        <label for="amount">Wert (€)</label>
+        <input id="amount" type="text" inputmode="decimal" placeholder="0,00" autocomplete="off">
+      </div>
+    </div>
+
+    <label for="note">Notiz (optional)</label>
+    <input id="note" type="text" placeholder="z. B. Stand September 2026" autocomplete="off">
+
+    <button class="primary" type="submit" id="saveBtn">Vermögenswert speichern</button>
+    <button class="secondary hidden" type="button" id="cancelBtn">Bearbeiten abbrechen</button>
+  </form>
+</div>
+
+<div class="section-title">Neue Verbindlichkeit</div>
+<div class="card">
+  <form id="liabilityForm" novalidate>
+    <label for="liabName">Bezeichnung</label>
+    <input id="liabName" type="text" placeholder="z. B. Immobilienkredit" autocomplete="off">
+    <div class="row">
+      <div>
+        <label for="liabType">Kategorie</label>
+        <select id="liabType">
+          <option>Kredit</option><option>Hypothek</option><option>Kreditkarte</option><option>Sonstiges</option>
+        </select>
+      </div>
+      <div>
+        <label for="liabAmount">Restschuld (€)</label>
+        <input id="liabAmount" type="text" inputmode="decimal" placeholder="0,00" autocomplete="off">
+      </div>
+    </div>
+    <button class="primary" type="submit">Verbindlichkeit speichern</button>
+  </form>
+</div>
+
+<div class="card notice">
+  Die Daten werden ausschließlich auf diesem iPhone im Browser gespeichert. Beim Bearbeiten wird der vorhandene Eintrag geladen; mit <b>„Vermögenswert speichern“</b> wird er zuverlässig aktualisiert.
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY="myfinance_v15";
+let data=load();
+
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(raw){
+      const d=JSON.parse(raw);
+      return {assets:Array.isArray(d.assets)?d.assets:[],liabilities:Array.isArray(d.liabilities)?d.liabilities:[]};
+    }
+  }catch(e){}
+  return {assets:[],liabilities:[]};
+}
+function persist(){
+  localStorage.setItem(KEY,JSON.stringify(data));
+}
+function euro(n){
+  return new Intl.NumberFormat("de-DE",{style:"currency",currency:"EUR"}).format(Number(n)||0);
+}
+function parseAmount(v){
+  let s=String(v).trim().replace(/\s/g,"");
+  if(!s)return NaN;
+  if(s.includes(",") && s.includes(".")) s=s.replace(/\./g,"").replace(",",".");
+  else if(s.includes(",")) s=s.replace(",",".");
+  return Number(s);
+}
+function esc(s){
+  return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+function toast(msg){
+  const el=document.getElementById("toast");el.textContent=msg;el.style.display="block";
+  clearTimeout(window.__toast);window.__toast=setTimeout(()=>el.style.display="none",1800);
+}
+function render(){
+  const a=data.assets.reduce((s,x)=>s+Number(x.amount||0),0);
+  const l=data.liabilities.reduce((s,x)=>s+Number(x.amount||0),0);
+  document.getElementById("assetsTotal").textContent=euro(a);
+  document.getElementById("liabilitiesTotal").textContent=euro(l);
+  document.getElementById("netWorth").textContent=euro(a-l);
+
+  const al=document.getElementById("assetList");
+  al.innerHTML=data.assets.length?data.assets.map(x=>`
+    <div class="asset">
+      <div>
+        <div class="asset-name">${esc(x.name)}</div>
+        <div class="asset-type">${esc(x.type)}${x.note?" · "+esc(x.note):""}</div>
+      </div>
+      <div class="actions">
+        <span class="amount">${euro(x.amount)}</span>
+        <button class="icon-btn" type="button" onclick="editAsset('${x.id}')">Bearbeiten</button>
+        <button class="icon-btn delete" type="button" onclick="deleteAsset('${x.id}')">Löschen</button>
+      </div>
+    </div>`).join(""):`<div class="empty">Noch keine Vermögenswerte vorhanden.</div>`;
+
+  const ll=document.getElementById("liabilityList");
+  ll.innerHTML=data.liabilities.length?data.liabilities.map(x=>`
+    <div class="asset">
+      <div><div class="asset-name">${esc(x.name)}</div><div class="asset-type">${esc(x.type)}</div></div>
+      <div class="actions"><span class="amount">${euro(x.amount)}</span>
+      <button class="icon-btn delete" type="button" onclick="deleteLiability('${x.id}')">Löschen</button></div>
+    </div>`).join(""):`<div class="empty">Noch keine Verbindlichkeiten vorhanden.</div>`;
+}
+function newId(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
+function editAsset(id){
+  const x=data.assets.find(v=>v.id===id);if(!x)return;
+  document.getElementById("editId").value=x.id;
+  document.getElementById("name").value=x.name;
+  document.getElementById("type").value=x.type;
+  document.getElementById("amount").value=String(x.amount).replace(".",",");
+  document.getElementById("note").value=x.note||"";
+  document.getElementById("formTitle").textContent="Vermögenswert bearbeiten";
+  document.getElementById("saveBtn").textContent="Änderungen speichern";
+  document.getElementById("cancelBtn").classList.remove("hidden");
+  document.getElementById("name").scrollIntoView({behavior:"smooth",block:"center"});
+}
+function resetAssetForm(){
+  document.getElementById("assetForm").reset();
+  document.getElementById("editId").value="";
+  document.getElementById("formTitle").textContent="Neuen Vermögenswert hinzufügen";
+  document.getElementById("saveBtn").textContent="Vermögenswert speichern";
+  document.getElementById("cancelBtn").classList.add("hidden");
+}
+function deleteAsset(id){
+  const x=data.assets.find(v=>v.id===id);
+  if(!x)return;
+  if(confirm(`„${x.name}“ wirklich löschen?`)){
+    data.assets=data.assets.filter(v=>v.id!==id);persist();render();toast("Vermögenswert gelöscht");
+  }
+}
+function deleteLiability(id){
+  const x=data.liabilities.find(v=>v.id===id);
+  if(!x)return;
+  if(confirm(`„${x.name}“ wirklich löschen?`)){
+    data.liabilities=data.liabilities.filter(v=>v.id!==id);persist();render();toast("Verbindlichkeit gelöscht");
+  }
+}
+
+document.getElementById("assetForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const name=document.getElementById("name").value.trim();
+  const type=document.getElementById("type").value;
+  const amount=parseAmount(document.getElementById("amount").value);
+  const note=document.getElementById("note").value.trim();
+  if(!name){alert("Bitte eine Bezeichnung eingeben.");document.getElementById("name").focus();return;}
+  if(!Number.isFinite(amount)||amount<0){alert("Bitte einen gültigen Wert eingeben.");document.getElementById("amount").focus();return;}
+
+  const id=document.getElementById("editId").value;
+  if(id){
+    const x=data.assets.find(v=>v.id===id);
+    if(x){x.name=name;x.type=type;x.amount=amount;x.note=note;}
+    toast("Änderungen gespeichert");
+  }else{
+    data.assets.push({id:newId(),name,type,amount,note});
+    toast("Vermögenswert gespeichert");
+  }
+  persist();render();resetAssetForm();
+});
+document.getElementById("cancelBtn").addEventListener("click",resetAssetForm);
+
+document.getElementById("liabilityForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const name=document.getElementById("liabName").value.trim();
+  const type=document.getElementById("liabType").value;
+  const amount=parseAmount(document.getElementById("liabAmount").value);
+  if(!name){alert("Bitte eine Bezeichnung eingeben.");document.getElementById("liabName").focus();return;}
+  if(!Number.isFinite(amount)||amount<0){alert("Bitte eine gültige Restschuld eingeben.");document.getElementById("liabAmount").focus();return;}
+  data.liabilities.push({id:newId(),name,type,amount});
+  persist();render();e.target.reset();toast("Verbindlichkeit gespeichert");
+});
+render();
+</script>
+</body>
+</html>
